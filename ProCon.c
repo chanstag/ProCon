@@ -4,7 +4,7 @@
 
 #define BUFFER_SIZE 1024
 
-int n;
+int n = 12;
 int buffer[BUFFER_SIZE];
 int in = 0, out = 0;
 sem_t empty, full, mutex;
@@ -13,6 +13,8 @@ void *runner(void *param); /* the thread */
 
 int main(int argc, char *argv[])
 {
+	int i;
+
 	pthread_t tid; /* the thread identifier */
 	pthread_attr_t attr; /* set of thread attributes */
 
@@ -21,23 +23,30 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "usage: ./a.out <positive integer>\n");
 		exit(0);
 	}
-	/* get default attribute */
-	pthread_attr_init(&attr);
-	/*create the thread */
-	pthread_create(&tid, &attr, runner, argv[1]);
-	printf("Main thread is busy doing something ...\n");
-	while (sum <= 1)
-	{
-		printf("%d ", sum);
+	for(i = 0; i < argv[1]; i++){
+		
+		/* get default attribute */
+		pthread_attr_init(&attr);
+		/*create the thread */
+		pthread_create(&tid, &attr, producer, NULL);
+
+	}
+		
+	for(i = 0; i < argv[1]; i++){
+		/* get default attribute */
+		pthread_attr_init(&attr);
+		/*create the thread */
+		pthread_create(&tid, &attr, consumer, NULL)
 	}
 	/* wait for the thread to exit */
 	pthread_join(tid, NULL);
-	printf("sum = %d \n", sum);
+	for(int k = 0; k < out; k++){
+		printf("value = %d \n", k);
+	}
 }
 
 void *runner(void *param)
 {
-
 	int i, upper = atoi(param);
 	sum = 0;
 
@@ -62,14 +71,43 @@ void initialize(){
 void consumer(){
 	do{
 	/* acquire the semaphore */
+	sem_wait(&full)
 	sem_wait(&mutex);	
 	
 	/*** critical section ***/
 	
-
+	buffer[out] = 0; 
 
 	/* release the semaphore */
 	sem_post(&mutex);
+	sem_post(&empty);
 
+	out = (out + 1) % BUFFER_SIZE;
+	if(out == n){
+		pthread_exit(); 
+	}
 	}while(1)
 }
+
+void producer(){
+
+do{
+
+	in = (in + 1) % BUFFER_SIZE;
+	if(in == n){
+		pthread_exit();		
+	}
+        /* acquire the semaphore */
+        sem_wait(&empty);
+	sem_wait(&mutex);
+	
+        /*** critical section ***/
+
+	 buffer[in] = in; 
+
+        /* release the semaphore */
+        sem_post(&mutex);
+	sem_post(&full);
+
+        }while(1)
+
